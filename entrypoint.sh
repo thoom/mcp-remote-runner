@@ -4,13 +4,13 @@
 # This script wraps mcp-remote and optionally applies tool filtering via mcp guard
 
 show_help() {
-    echo "Usage: $0 --url <server_url> --port <port> [OPTIONS]"
+    echo "Usage: $0 --url <server_url> [--port <port>] [OPTIONS]"
     echo ""
     echo "Required Arguments:"
     echo "  --url <server_url>     URL of the MCP server to connect to"
-    echo "  --port <port>          Port for mcp-remote to listen on"
     echo ""
     echo "Options:"
+    echo "  --port <port>          Port for mcp-remote to listen on (only needed for callback)"
     echo "  --tools <patterns>     Comma-separated list of tool patterns to whitelist"
     echo "                         (e.g., 'tools:read_*,tools:search_*')"
     echo "  --list-tools          List all available tools (unfiltered) and exit"
@@ -85,8 +85,8 @@ while [ $# -gt 0 ]; do
 done
 
 # Validate required arguments
-if [ -z "$SERVER_URL" ] || [ -z "$PORT" ]; then
-    echo "Error: --url and --port are required" >&2
+if [ -z "$SERVER_URL" ]; then
+    echo "Error: --url is required" >&2
     show_help >&2
     exit 1
 fi
@@ -103,19 +103,30 @@ fi
 # Handle list-tools mode
 if [ "$LIST_TOOLS" = true ]; then
     echo "Discovering available tools from $SERVER_URL..." >&2
+    CMD_ARGS="$SERVER_URL"
+    if [ -n "$PORT" ]; then
+        CMD_ARGS="$CMD_ARGS $PORT"
+    fi
+    
     if [ -n "$HEADER" ]; then
         if [ -n "$MCP_ARGS" ]; then
-            exec ./list-tools.js $MCP_ARGS --header "$HEADER" "$SERVER_URL" "$PORT"
+            exec ./list-tools.js $MCP_ARGS --header "$HEADER" $CMD_ARGS
         else
-            exec ./list-tools.js --header "$HEADER" "$SERVER_URL" "$PORT"
+            exec ./list-tools.js --header "$HEADER" $CMD_ARGS
         fi
     else
         if [ -n "$MCP_ARGS" ]; then
-            exec ./list-tools.js $MCP_ARGS "$SERVER_URL" "$PORT"
+            exec ./list-tools.js $MCP_ARGS $CMD_ARGS
         else
-            exec ./list-tools.js "$SERVER_URL" "$PORT"
+            exec ./list-tools.js $CMD_ARGS
         fi
     fi
+fi
+
+# Build the command arguments
+CMD_ARGS="$SERVER_URL"
+if [ -n "$PORT" ]; then
+    CMD_ARGS="$CMD_ARGS $PORT"
 fi
 
 # Build the command
@@ -124,15 +135,15 @@ if [ -n "$TOOLS" ]; then
     echo "Starting mcp-remote with tool filtering: $TOOLS" >&2
     if [ -n "$HEADER" ]; then
         if [ -n "$MCP_ARGS" ]; then
-            exec ./filter-tools.js --allow "$TOOLS" -- mcp-remote $MCP_ARGS --header "$HEADER" "$SERVER_URL" "$PORT"
+            exec ./filter-tools.js --allow "$TOOLS" -- mcp-remote $MCP_ARGS --header "$HEADER" $CMD_ARGS
         else
-            exec ./filter-tools.js --allow "$TOOLS" -- mcp-remote --header "$HEADER" "$SERVER_URL" "$PORT"
+            exec ./filter-tools.js --allow "$TOOLS" -- mcp-remote --header "$HEADER" $CMD_ARGS
         fi
     else
         if [ -n "$MCP_ARGS" ]; then
-            exec ./filter-tools.js --allow "$TOOLS" -- mcp-remote $MCP_ARGS "$SERVER_URL" "$PORT"
+            exec ./filter-tools.js --allow "$TOOLS" -- mcp-remote $MCP_ARGS $CMD_ARGS
         else
-            exec ./filter-tools.js --allow "$TOOLS" -- mcp-remote "$SERVER_URL" "$PORT"
+            exec ./filter-tools.js --allow "$TOOLS" -- mcp-remote $CMD_ARGS
         fi
     fi
 else
@@ -140,15 +151,15 @@ else
     echo "Starting mcp-remote without tool filtering" >&2
     if [ -n "$HEADER" ]; then
         if [ -n "$MCP_ARGS" ]; then
-            exec mcp-remote $MCP_ARGS --header "$HEADER" "$SERVER_URL" "$PORT"
+            exec mcp-remote $MCP_ARGS --header "$HEADER" $CMD_ARGS
         else
-            exec mcp-remote --header "$HEADER" "$SERVER_URL" "$PORT"
+            exec mcp-remote --header "$HEADER" $CMD_ARGS
         fi
     else
         if [ -n "$MCP_ARGS" ]; then
-            exec mcp-remote $MCP_ARGS "$SERVER_URL" "$PORT"
+            exec mcp-remote $MCP_ARGS $CMD_ARGS
         else
-            exec mcp-remote "$SERVER_URL" "$PORT"
+            exec mcp-remote $CMD_ARGS
         fi
     fi
 fi
