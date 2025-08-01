@@ -74,8 +74,8 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # Build and push Docker images
-      - name: Build and push Docker images
+      # Build and push Docker images (with version)
+      - name: Build and push Docker images (with version)
         if: ${{ steps.tag.outputs.value != '' }}
         env:
           IMAGE_NAME: ${{ github.repository }}
@@ -88,5 +88,19 @@ jobs:
             --tag $IMAGE_NAME:$RELEASE_VERSION \
             --tag ghcr.io/$IMAGE_NAME:latest \
             --tag ghcr.io/$IMAGE_NAME:$RELEASE_VERSION \
+            --push \
+            .
+
+      # Build and push Docker images (latest only for manual runs)
+      - name: Build and push Docker images (latest only)
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        env:
+          IMAGE_NAME: ${{ github.repository }}
+        run: |
+          # Build the image
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --tag $IMAGE_NAME:latest \
+            --tag ghcr.io/$IMAGE_NAME:latest \
             --push \
             .
