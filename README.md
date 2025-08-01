@@ -20,27 +20,22 @@ docker pull ghcr.io/thoom/mcp-remote-runner:latest
 
 ### 2. Run the Container
 
-To run the container, you need to provide a server URL and a port for the application to listen on.
-
 The general command structure is:
 
 ```bash
 docker run -i --rm \
-  -p <port>:<port> \
   -v ~/.mcp-auth:/home/node/.mcp-auth \
-  ghcr.io/thoom/mcp-remote-runner --url <server_url> --port <port> [OPTIONS]
+  ghcr.io/thoom/mcp-remote-runner --url <server_url> [OPTIONS]
 ```
 
 **Command Arguments Explained:**
 
 - `-i`: Runs the container in interactive mode, which is necessary for `mcp-remote`.
 - `--rm`: Automatically removes the container when it exits.
-- `-p <port>:<port>`: Exposes the application's port to your local machine. The port number must be the same on both sides of the colon.
 - `-v ~/.mcp-auth:/home/node/.mcp-auth`: Persists authentication credentials by mounting a local directory into the container.
 - `ghcr.io/thoom/mcp-remote-runner`: The name of the Docker image.
 - `--url <server_url>`: The URL of the MCP server you want to connect to.
-- `--port <port>`: The port for `mcp-remote` to listen on. This **must match** the port used in the `-p` flag for authentication to work correctly.
-- `[OPTIONS]`: Optional flags (see Tool Whitelisting section below).
+- `[OPTIONS]`: Optional flags (see sections below).
 
 ### Tool Whitelisting
 
@@ -67,140 +62,94 @@ You can now restrict which MCP tools are available by using the `--tools` option
 ```bash
 # Basic connection without tool filtering
 docker run -i --rm \
-  -p 3334:3334 \
   -v ~/.mcp-auth:/home/node/.mcp-auth \
   ghcr.io/thoom/mcp-remote-runner \
-  --url https://mcp.atlassian.com/v1/sse --port 3334
+  --url https://mcp.atlassian.com/v1/sse
 
 # Discover all available tools first
 docker run -i --rm \
-  -p 3334:3334 \
   -v ~/.mcp-auth:/home/node/.mcp-auth \
   ghcr.io/thoom/mcp-remote-runner \
-  --url https://mcp.atlassian.com/v1/sse --port 3334 --list-tools
+  --url https://mcp.atlassian.com/v1/sse --list-tools
 
 # Only allow file reading and searching tools
 docker run -i --rm \
-  -p 3334:3334 \
   -v ~/.mcp-auth:/home/node/.mcp-auth \
   ghcr.io/thoom/mcp-remote-runner \
-  --url https://mcp.atlassian.com/v1/sse --port 3334 \
+  --url https://mcp.atlassian.com/v1/sse \
   --tools 'tools:read_*,tools:search_*'
 
 # Allow only specific tools with debug logging
 docker run -i --rm \
-  -p 3334:3334 \
   -v ~/.mcp-auth:/home/node/.mcp-auth \
   ghcr.io/thoom/mcp-remote-runner \
-  --url https://mcp.atlassian.com/v1/sse --port 3334 \
+  --url https://mcp.atlassian.com/v1/sse \
   --tools 'tools:read_file,tools:list_directory' --debug
 ```
 
 ### 3. Authentication
 
-The first time you run the container, `mcp-remote` will generate a URL for you to open in your browser to complete the OAuth authentication flow.
-
-By mounting the `~/.mcp-auth` directory, your credentials will be saved on your host machine, and subsequent runs of the container will be authenticated automatically.
-
-## Example
-
-Here is a full example of running the container to connect to an Atlassian MCP server on port `3334`.
+**For OAuth-enabled MCP servers**, you'll need to complete authentication the first time:
 
 ```bash
+# Initial OAuth setup (requires port for callback)
 docker run -i --rm \
   -p 3334:3334 \
   -v ~/.mcp-auth:/home/node/.mcp-auth \
-  ghcr.io/thoom/mcp-remote-runner https://mcp.atlassian.com/v1/sse 3334
+  ghcr.io/thoom/mcp-remote-runner \
+  --url https://mcp.atlassian.com/v1/sse --port 3334
 ```
 
-### Tool Configuration Examples
+The tool will generate a URL for you to open in your browser to complete the OAuth flow. By mounting the `~/.mcp-auth` directory, your credentials are saved on your host machine.
 
-Here are example configurations for integrating the MCP Remote Runner with different development tools.
+**After initial setup**, you can omit the port entirely since tokens are cached:
 
----
+```bash
+# All subsequent runs (no port needed)
+docker run -i --rm \
+  -v ~/.mcp-auth:/home/node/.mcp-auth \
+  ghcr.io/thoom/mcp-remote-runner \
+  --url https://mcp.atlassian.com/v1/sse
+```
 
-#### VSCode (`.vscode/tasks.json`)
+This eliminates port conflicts when using the same MCP server across multiple clients (Claude Code, Claude Desktop, VSCode, Cursor, etc.).
 
-In VSCode, a convenient way to run the Docker command is by creating a task in your project's `.vscode/tasks.json` file. This makes the runner available through the "Run Task" command palette option.
+## MCP Client Configuration
+
+#### Claude Desktop / Cursor
+
+For Claude Desktop or Cursor, add to your MCP servers configuration:
 
 ```json
 {
-  "version": "2.0.0",
-  "tasks": [
-    {
-      "label": "Run MCP Remote Runner",
-      "type": "shell",
+  "mcpServers": {
+    "npx-atlassian": {
       "command": "docker",
       "args": [
         "run",
         "-i",
         "--rm",
-        "-p", "3334:3334",
         "-v", "~/.mcp-auth:/home/node/.mcp-auth",
         "ghcr.io/thoom/mcp-remote-runner",
-        "--url", "https://mcp.atlassian.com/v1/sse",
-        "--port", "3334"
-      ],
-      "isBackground": true
+        "--url", "https://mcp.atlassian.com/v1/sse"
+      ]
     },
-    {
-      "label": "Run MCP Remote Runner (Read-only)",
-      "type": "shell",
+    "npx-atlassian-readonly": {
       "command": "docker",
       "args": [
         "run",
         "-i",
         "--rm",
-        "-p", "3334:3334",
         "-v", "~/.mcp-auth:/home/node/.mcp-auth",
         "ghcr.io/thoom/mcp-remote-runner",
         "--url", "https://mcp.atlassian.com/v1/sse",
-        "--port", "3334",
         "--tools", "tools:read_*,tools:search_*,tools:list_*"
-      ],
-      "isBackground": true
+      ]
     }
-  ]
-}
-```
-
----
-
-#### Cursor / Claude Desktop
-
-For Cursor or Claude Desktop, the configuration typically involves defining a runner command in your settings JSON file.
-
-```json
-{
-  "npx-atlassian": {
-    "command": "docker",
-    "args": [
-      "run",
-      "-i",
-      "--rm",
-      "-p", "3334:3334",
-      "-v", "~/.mcp-auth:/home/node/.mcp-auth",
-      "ghcr.io/thoom/mcp-remote-runner",
-      "--url", "https://mcp.atlassian.com/v1/sse",
-      "--port", "3334"
-    ]
-  },
-  "npx-atlassian-readonly": {
-    "command": "docker",
-    "args": [
-      "run",
-      "-i",
-      "--rm",
-      "-p", "3335:3335",
-      "-v", "~/.mcp-auth:/home/node/.mcp-auth",
-      "ghcr.io/thoom/mcp-remote-runner",
-      "--url", "https://mcp.atlassian.com/v1/sse",
-      "--port", "3335",
-      "--tools", "tools:read_*,tools:search_*,tools:list_*"
-    ]
   }
 }
 ```
+
 
 ## Building from Source (Optional)
 
