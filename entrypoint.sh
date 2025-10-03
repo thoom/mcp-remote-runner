@@ -15,6 +15,7 @@ show_help() {
     echo "                         (e.g., 'tools:read_*,tools:search_*')"
     echo "  --list-tools          List all available tools (unfiltered) and exit"
     echo "  --header <header>     Add custom header (e.g., 'Authorization: Bearer TOKEN')"
+    echo "  --transport <type>    Transport type (e.g., 'sse', 'websocket')"
     echo "  --allow-http          Allow HTTP connections (trusted networks only)"
     echo "  --debug               Enable debug logging"
     echo "  --help                Show this help message"
@@ -32,6 +33,7 @@ TOOLS=""
 HEADER=""
 SERVER_URL=""
 PORT=""
+TRANSPORT=""
 LIST_TOOLS=false
 ALLOW_HTTP=false
 DEBUG=false
@@ -56,6 +58,10 @@ while [ $# -gt 0 ]; do
             ;;
         --header)
             HEADER="$2"
+            shift 2
+            ;;
+        --transport)
+            TRANSPORT="$2"
             shift 2
             ;;
         --allow-http)
@@ -94,10 +100,25 @@ fi
 # Build MCP arguments
 MCP_ARGS=""
 if [ "$ALLOW_HTTP" = true ]; then
-    MCP_ARGS="$MCP_ARGS --allow-http"
+    if [ -n "$MCP_ARGS" ]; then
+        MCP_ARGS="$MCP_ARGS --allow-http"
+    else
+        MCP_ARGS="--allow-http"
+    fi
+fi
+if [ -n "$TRANSPORT" ]; then
+    if [ -n "$MCP_ARGS" ]; then
+        MCP_ARGS="$MCP_ARGS --transport $TRANSPORT"
+    else
+        MCP_ARGS="--transport $TRANSPORT"
+    fi
 fi
 if [ "$DEBUG" = true ]; then
-    MCP_ARGS="$MCP_ARGS --debug"
+    if [ -n "$MCP_ARGS" ]; then
+        MCP_ARGS="$MCP_ARGS --debug"
+    else
+        MCP_ARGS="--debug"
+    fi
 fi
 
 # Handle list-tools mode
