@@ -135,13 +135,13 @@ if [ -n "$TOOLS" ]; then
     echo "Starting mcp-remote with tool filtering: $TOOLS" >&2
     if [ -n "$HEADER" ]; then
         if [ -n "$MCP_ARGS" ]; then
-            exec ./filter-tools.js --allow "$TOOLS" -- mcp-remote $MCP_ARGS --header "$HEADER" $CMD_ARGS
+            exec ./filter-tools.js --allow "$TOOLS" -- mcp-remote $CMD_ARGS --header "$HEADER" $MCP_ARGS
         else
-            exec ./filter-tools.js --allow "$TOOLS" -- mcp-remote --header "$HEADER" $CMD_ARGS
+            exec ./filter-tools.js --allow "$TOOLS" -- mcp-remote $CMD_ARGS --header "$HEADER"
         fi
     else
         if [ -n "$MCP_ARGS" ]; then
-            exec ./filter-tools.js --allow "$TOOLS" -- mcp-remote $MCP_ARGS $CMD_ARGS
+            exec ./filter-tools.js --allow "$TOOLS" -- mcp-remote $CMD_ARGS $MCP_ARGS
         else
             exec ./filter-tools.js --allow "$TOOLS" -- mcp-remote $CMD_ARGS
         fi
@@ -151,13 +151,13 @@ else
     echo "Starting mcp-remote without tool filtering" >&2
     if [ -n "$HEADER" ]; then
         if [ -n "$MCP_ARGS" ]; then
-            exec mcp-remote $MCP_ARGS --header "$HEADER" $CMD_ARGS
+            exec mcp-remote $CMD_ARGS --header "$HEADER" $MCP_ARGS
         else
-            exec mcp-remote --header "$HEADER" $CMD_ARGS
+            exec mcp-remote $CMD_ARGS --header "$HEADER"
         fi
     else
         if [ -n "$MCP_ARGS" ]; then
-            exec mcp-remote $MCP_ARGS $CMD_ARGS
+            exec mcp-remote $CMD_ARGS $MCP_ARGS
         else
             exec mcp-remote $CMD_ARGS
         fi
